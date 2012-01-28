@@ -2,6 +2,7 @@
 from pelican.utils import slugify, truncate_html_words
 from pelican.log import *
 from pelican.settings import _DEFAULT_CONFIG
+from datetime import datetime
 from os import getenv
 from sys import platform, stdin
 
@@ -23,8 +24,6 @@ class Page(object):
         self._content = content
         self.translations = []
 
-        self.status = "published"  # default value
-
         local_metadata = dict(settings.get('DEFAULT_METADATA', ()))
         local_metadata.update(metadata)
 
@@ -38,7 +37,7 @@ class Page(object):
                 self.author = settings['AUTHOR']
             else:
                 self.author = getenv('USER', 'John Doe')
-                warning("Author of `{0}' unknow, assuming that his name is `{1}'".format(filename or self.title, self.author).decode("utf-8"))
+                warning(u"Author of `{0}' unknow, assuming that his name is `{1}'".format(filename or self.title, self.author))
 
         # manage languages
         self.in_default_lang = True
@@ -56,10 +55,18 @@ class Page(object):
         # create save_as from the slug (+lang)
         if not hasattr(self, 'save_as') and hasattr(self, 'slug'):
             if self.in_default_lang:
-                self.save_as = '%s.html' % self.slug
+                if settings.get('CLEAN_URLS', False):
+                    self.save_as = '%s/index.html' % self.slug
+                else:
+                    self.save_as = '%s.html' % self.slug
+
                 clean_url = '%s/' % self.slug
             else:
-                self.save_as = '%s-%s.html' % (self.slug, self.lang)
+                if settings.get('CLEAN_URLS', False):
+                    self.save_as = '%s-%s/index.html' % (self.slug, self.lang)
+                else:
+                    self.save_as = '%s-%s.html' % (self.slug, self.lang)
+
                 clean_url = '%s-%s/' % (self.slug, self.lang)
 
         # change the save_as regarding the settings
@@ -87,7 +94,10 @@ class Page(object):
         # manage status
         if not hasattr(self, 'status'):
             self.status = settings['DEFAULT_STATUS']
-
+            if not settings['WITH_FUTURE_DATES']:
+                if hasattr(self, 'date') and self.date > datetime.now():
+                    self.status = 'draft'
+        
         # set summary
         if not hasattr(self, 'summary'):
             self.summary = truncate_html_words(self.content, 50)

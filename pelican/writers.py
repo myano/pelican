@@ -34,6 +34,7 @@ class Writer(object):
         feed.add_item(
             title=item.title,
             link='%s/%s' % (self.site_url, item.url),
+            unique_id='%s/%s' % (self.site_url, item.url),
             description=item.content,
             categories=item.tags if hasattr(item, 'tags') else None,
             author_name=getattr(item, 'author', 'John Doe'),
@@ -126,7 +127,7 @@ class Writer(object):
             for key in paginated.iterkeys():
                 object_list = paginated[key]
 
-                if self.settings.get('WITH_PAGINATION'):
+                if self.settings.get('DEFAULT_PAGINATION'):
                     paginators[key] = Paginator(object_list,
                         self.settings.get('DEFAULT_PAGINATION'),
                         self.settings.get('DEFAULT_ORPHANS'))
