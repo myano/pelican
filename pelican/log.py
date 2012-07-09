@@ -1,29 +1,30 @@
-from logging import CRITICAL, ERROR,  WARN, INFO, DEBUG
-from logging import critical, error, info, warning, warn, debug
-from logging import Formatter, getLogger, StreamHandler
-import sys
-import os
+__all__ = [
+    'init'
+]
 
-global ANSI
-ANSI = {
-    'gray' : lambda(text) : u'\033[1;30m' + unicode(text) + u'\033[1;m',
-    'red' : lambda(text) : u'\033[1;31m' + unicode(text) + u'\033[1;m',
-    'green' : lambda(text) : u'\033[1;32m' + unicode(text) + u'\033[1;m',
-    'yellow' : lambda(text) : u'\033[1;33m' + unicode(text) + u'\033[1;m',
-    'blue' : lambda(text) : u'\033[1;34m' + unicode(text) + u'\033[1;m',
-    'magenta' : lambda(text) : u'\033[1;35m' + unicode(text) + u'\033[1;m',
-    'cyan' : lambda(text) : u'\033[1;36m' + unicode(text) + u'\033[1;m',
-    'white' : lambda(text) : u'\033[1;37m' + unicode(text) + u'\033[1;m',
-    'bgred' : lambda(text) : u'\033[1;41m' + unicode(text) + u'\033[1;m',
-    'bggreen' : lambda(text) : u'\033[1;42m' + unicode(text) + u'\033[1;m',
-    'bgbrown' : lambda(text) : u'\033[1;43m' + unicode(text) + u'\033[1;m',
-    'bgblue' : lambda(text) : u'\033[1;44m' + unicode(text) + u'\033[1;m',
-    'bgmagenta' : lambda(text) : u'\033[1;45m' + unicode(text) + u'\033[1;m',
-    'bgcyan' : lambda(text) : u'\033[1;46m' + unicode(text) + u'\033[1;m',
-    'bggray' : lambda(text) : u'\033[1;47m' + unicode(text) + u'\033[1;m',
-    'bgyellow' : lambda(text) : u'\033[1;43m' + unicode(text) + u'\033[1;m',
-    'bggrey' : lambda(text) : u'\033[1;100m' + unicode(text) + u'\033[1;m'
+import os
+import sys
+import logging
+
+from logging import Formatter, getLogger, StreamHandler, DEBUG
+
+
+RESET_TERM = u'\033[0;m'
+
+COLOR_CODES = {
+    'red': 31,
+    'yellow': 33,
+    'cyan': 36,
+    'white': 37,
+    'bgred': 41,
+    'bggrey': 100,
 }
+
+
+def ansi(color, text):
+    """Wrap text in an ansi escape sequence"""
+    code = COLOR_CODES[color]
+    return u'\033[1;{0}m{1}{2}'.format(code, text, RESET_TERM)
 
 
 class ANSIFormatter(Formatter):
@@ -34,17 +35,17 @@ class ANSIFormatter(Formatter):
 
     def format(self, record):
         if record.levelname is 'INFO':
-            return ANSI['cyan']('-> ') + unicode(record.msg)
+            return ansi('cyan', '-> ') + unicode(record.msg)
         elif record.levelname is 'WARNING':
-            return ANSI['yellow'](record.levelname) + ': ' + unicode(record.msg)
+            return ansi('yellow', record.levelname) + ': ' + unicode(record.msg)
         elif record.levelname is 'ERROR':
-            return ANSI['red'](record.levelname) + ': ' + unicode(record.msg)
+            return ansi('red', record.levelname) + ': ' + unicode(record.msg)
         elif record.levelname is 'CRITICAL':
-            return ANSI['bgred'](record.levelname) + ': ' + unicode(record.msg)
+            return ansi('bgred', record.levelname) + ': ' + unicode(record.msg)
         elif record.levelname is 'DEBUG':
-            return ANSI['bggrey'](record.levelname) + ': ' + unicode(record.msg)
+            return ansi('bggrey', record.levelname) + ': ' + unicode(record.msg)
         else:
-            return ANSI['white'](record.levelname) + ': ' + unicode(record.msg)
+            return ansi('white', record.levelname) + ': ' + unicode(record.msg)
 
 
 class TextFormatter(Formatter):
@@ -59,50 +60,27 @@ class TextFormatter(Formatter):
             return record.levelname + ': ' + record.msg
 
 
-class DummyFormatter(object):
-    """
-    A dummy class.
-    Return an instance of the appropriate formatter (ANSIFormatter if sys.stdout.isatty() is True, else TextFormatter)
-    """
-
-    def __new__(cls, *args, **kwargs):
-        if os.isatty(sys.stdout.fileno())\
-           and not sys.platform.startswith('win'): 
-            return ANSIFormatter(*args, **kwargs)
-        else:
-            return TextFormatter( *args, **kwargs)
-
-
-
-
-
 def init(level=None, logger=getLogger(), handler=StreamHandler()):
-    fmt = DummyFormatter()
+    logger = logging.getLogger()
+
+    if os.isatty(sys.stdout.fileno()) \
+       and not sys.platform.startswith('win'):
+        fmt = ANSIFormatter()
+    else:
+        fmt = TextFormatter()
     handler.setFormatter(fmt)
     logger.addHandler(handler)
+
     if level:
         logger.setLevel(level)
 
 
 if __name__ == '__main__':
     init(level=DEBUG)
-    debug('debug')
-    info('info')
-    warning('warning')
-    error('error')
-    critical('critical')
 
-
-__all__ = [
-    "debug", 
-    "info", 
-    "warn", 
-    "warning",
-    "error", 
-    "critical", 
-    "DEBUG", 
-    "INFO", 
-    "WARN", 
-    "ERROR", 
-    "CRITICAL"
-] 
+    root_logger = logging.getLogger()
+    root_logger.debug('debug')
+    root_logger.info('info')
+    root_logger.warning('warning')
+    root_logger.error('error')
+    root_logger.critical('critical')

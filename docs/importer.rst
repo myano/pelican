@@ -10,24 +10,40 @@ Description
 ``pelican-import`` is a command line tool for converting articles from other
 software to ReStructuredText. The supported formats are:
 
-- Wordpress XML export
+- WordPress XML export
 - Dotclear export
-- RSS/ATOM feed
+- RSS/Atom feed
 
-The conversion from HTML to ReStructuredText relies on `pandoc
+The conversion from HTML to reStructuredText relies on `pandoc
 <http://johnmacfarlane.net/pandoc/>`_. For Dotclear, if the source posts are
 written with Markdown syntax, they will not be converted (as Pelican also
 supports Markdown).
+
+Dependencies
+""""""""""""
+
+``pelican-import`` has two dependencies not required by the rest of pelican:
+
+- BeautifulSoup
+- pandoc
+
+BeatifulSoup can be installed like any other Python package::
+
+    $ pip install BeautifulSoup
+
+For pandoc, install a package for your operating system from the 
+`pandoc site <http://johnmacfarlane.net/pandoc/installing.html>`_.
+
 
 Usage
 """""
 
 | pelican-import [-h] [--wpfile] [--dotclear] [--feed] [-o OUTPUT]
-|                [--dir-cat]
+|                [-m MARKUP][--dir-cat]
 |                input
 
-Optional arguments:
-"""""""""""""""""""
+Optional arguments
+""""""""""""""""""
 
   -h, --help            show this help message and exit
   --wpfile              Wordpress XML export
@@ -35,12 +51,13 @@ Optional arguments:
   --feed                Feed to parse
   -o OUTPUT, --output OUTPUT
                         Output path
+  -m MARKUP             Output markup
   --dir-cat             Put files in directories with categories name
 
 Examples
 ========
 
-for Wordpress::
+for WordPress::
 
     $ pelican-import --wpfile -o ~/output ~/posts.xml
 

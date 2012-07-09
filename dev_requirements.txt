@@ -1,5 +1,10 @@
-Jinja2
+Jinja2>=2.4
 Pygments
 docutils
 feedgenerator
 unittest2
+pytz
+mock
+Markdown
+blinker
+BeautifulSoup
