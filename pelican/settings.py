@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import copy
+import imp
+import inspect
 import os
 import locale
 import logging
@@ -21,18 +24,19 @@ _DEFAULT_CONFIG = {'PATH': '.',
                    'MARKUP': ('rst', 'md'),
                    'STATIC_PATHS': ['images', ],
                    'THEME_STATIC_PATHS': ['static', ],
-                   'FEED': 'feeds/all.atom.xml',
-                   'CATEGORY_FEED': 'feeds/%s.atom.xml',
+                   'FEED_ATOM': 'feeds/all.atom.xml',
+                   'CATEGORY_FEED_ATOM': 'feeds/%s.atom.xml',
                    'TRANSLATION_FEED': 'feeds/all-%s.atom.xml',
                    'FEED_MAX_ITEMS': '',
+                   'SITEURL': '',
                    'SITENAME': 'A Pelican Blog',
                    'DISPLAY_PAGES_ON_MENU': True,
                    'PDF_GENERATOR': False,
                    'DEFAULT_CATEGORY': 'misc',
-                   'FALLBACK_ON_FS_DATE': True,
+                   'DEFAULT_DATE': 'fs',
                    'WITH_FUTURE_DATES': True,
                    'CSS_FILE': 'main.css',
-                   'REVERSE_ARCHIVE_ORDER': False,
+                   'NEWEST_FIRST_ARCHIVES': True,
                    'REVERSE_CATEGORY_ORDER': False,
                    'DELETE_OUTPUT_DIRECTORY': False,
                    'ARTICLE_URL': '{slug}.html',
@@ -78,30 +82,39 @@ def read_settings(filename=None):
     if filename:
         local_settings = get_settings_from_file(filename)
     else:
-        local_settings = _DEFAULT_CONFIG
+        local_settings = copy.deepcopy(_DEFAULT_CONFIG)
     configured_settings = configure_settings(local_settings, None, filename)
     return configured_settings
 
 
-def get_settings_from_file(filename, default_settings=None):
-    """Load a Python file into a dictionary.
+def get_settings_from_module(module=None, default_settings=_DEFAULT_CONFIG):
     """
-    if default_settings == None:
-        default_settings = _DEFAULT_CONFIG
-    context = default_settings.copy()
-    if filename:
-        tempdict = {}
-        execfile(filename, tempdict)
-        for key in tempdict:
-            if key.isupper():
-                context[key] = tempdict[key]
+    Load settings from a module, returning a dict.
+    """
+
+    context = copy.deepcopy(default_settings)
+    if module is not None:
+         context.update(
+             (k, v) for k, v in inspect.getmembers(module) if k.isupper()
+         )
     return context
+
+
+def get_settings_from_file(filename, default_settings=_DEFAULT_CONFIG):
+    """
+    Load settings from a file path, returning a dict.
+
+    """
+
+    name = os.path.basename(filename).rpartition(".")[0]
+    module = imp.load_source(name, filename)
+    return get_settings_from_module(module, default_settings=default_settings)
 
 
 def configure_settings(settings, default_settings=None, filename=None):
     """Provide optimizations, error checking, and warnings for loaded settings"""
     if default_settings is None:
-        default_settings = _DEFAULT_CONFIG
+        default_settings = copy.deepcopy(_DEFAULT_CONFIG)
 
     # Make the paths relative to the settings file
     if filename:
@@ -125,7 +138,7 @@ def configure_settings(settings, default_settings=None, filename=None):
     for locale_ in locales:
         try:
             locale.setlocale(locale.LC_ALL, locale_)
-            break  # break if it is successfull
+            break  # break if it is successful
         except locale.Error:
             pass
     else:
@@ -142,7 +155,7 @@ def configure_settings(settings, default_settings=None, filename=None):
             settings['FEED_DOMAIN'] = settings['SITEURL']
 
     # Warn if feeds are generated with both SITEURL & FEED_DOMAIN undefined
-    if (('FEED' in settings) or ('FEED_RSS' in settings)) and (not 'FEED_DOMAIN' in settings):
+    if (('FEED_ATOM' in settings) or ('FEED_RSS' in settings)) and (not 'FEED_DOMAIN' in settings):
         logger.warn("Since feed URLs should always be absolute, you should specify "
                  "FEED_DOMAIN in your settings. (e.g., 'FEED_DOMAIN = "
                  "http://www.example.com')")

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import locale
 import logging
 import functools
@@ -21,6 +22,7 @@ class Page(object):
     :param content: the string to parse, containing the original content.
     """
     mandatory_properties = ('title',)
+    default_template = 'page'
 
     def __init__(self, content, metadata=None, settings=None,
                  filename=None):
@@ -28,7 +30,7 @@ class Page(object):
         if not metadata:
             metadata = {}
         if not settings:
-            settings = _DEFAULT_CONFIG
+            settings = copy.deepcopy(_DEFAULT_CONFIG)
 
         self.settings = settings
         self._content = content
@@ -43,6 +45,9 @@ class Page(object):
 
         # also keep track of the metadata attributes available
         self.metadata = local_metadata
+
+        #default template if it's not defined in page
+        self.template = self._get_template()
 
         # default author to the one in settings if not defined
         if not hasattr(self, 'author'):
@@ -153,9 +158,16 @@ class Page(object):
     url = property(functools.partial(get_url_setting, key='url'))
     save_as = property(functools.partial(get_url_setting, key='save_as'))
 
+    def _get_template(self):
+        if hasattr(self, 'template') and self.template is not None:
+            return self.template
+        else:
+            return self.default_template
+
 
 class Article(Page):
     mandatory_properties = ('title', 'date', 'category')
+    default_template = 'article'
 
 
 class Quote(Page):

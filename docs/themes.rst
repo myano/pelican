@@ -6,7 +6,7 @@ How to create themes for Pelican
 Pelican uses the great `Jinja2 <http://jinja.pocoo.org/>`_ templating engine to
 generate its HTML output. Jinja2 syntax is really simple. If you want to
 create your own theme, feel free to take inspiration from the `"simple" theme
-<https://github.com/ametaireau/pelican/tree/master/pelican/themes/simple/templates>`_.
+<https://github.com/getpelican/pelican/tree/master/pelican/themes/simple/templates>`_.
 
 Structure
 =========
@@ -29,7 +29,7 @@ To make your own theme, you must follow the following structure::
         └── tags.html        // must list all the tags. Can be a tag cloud.
 
 * `static` contains all the static assets, which will be copied to the output
-  `theme/static` folder. I've put the CSS and image folders here, but they are
+  `theme` folder. I've put the CSS and image folders here, but they are
   just examples. Put what you need here.
 
 * `templates` contains all the templates that will be used to generate the content.
@@ -188,6 +188,22 @@ dates_page              The current page of articles, ordered by date,
                         ascending
 page_name               'tag/`tag_name`' -- useful for pagination links
 ===================     ===================================================
+
+Feeds
+=====
+
+The feed variables changed in 3.0. Each variable now explicitly lists ATOM or
+RSS in the name. ATOM is still the default. Old themes will need to be updated.
+Here is a complete list of the feed variables::
+
+    FEED_ATOM
+    FEED_RSS
+    CATEGORY_FEED_ATOM
+    CATEGORY_FEED_RSS
+    TAG_FEED_ATOM
+    TAG_FEED_RSS
+    TRANSLATION_FEED
+
 
 Inheritance
 ===========

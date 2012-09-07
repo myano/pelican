@@ -116,6 +116,7 @@ class ArticlesGenerator(Generator):
         self.dates = {}
         self.tags = defaultdict(list)
         self.categories = defaultdict(list)
+        self.related_posts = []
         self.authors = defaultdict(list)
         super(ArticlesGenerator, self).__init__(*args, **kwargs)
         self.drafts = []
@@ -123,10 +124,16 @@ class ArticlesGenerator(Generator):
 
     def generate_feeds(self, writer):
         """Generate the feeds from the current context, and output files."""
+        if self.settings.get('FEED_ATOM') is None and self.settings.get('FEED_RSS') is None:
+            return
+        elif self.settings.get('SITEURL') is '':
+            logger.warning(
+                'Feeds generated without SITEURL set properly may not be valid'
+            )
 
-        if self.settings.get('FEED'):
+        if self.settings.get('FEED_ATOM'):
             writer.write_feed(self.articles, self.context,
-                              self.settings['FEED'])
+                              self.settings['FEED_ATOM'])
 
         if self.settings.get('FEED_RSS'):
             writer.write_feed(self.articles, self.context,
@@ -134,21 +141,21 @@ class ArticlesGenerator(Generator):
 
         for cat, arts in self.categories:
             arts.sort(key=attrgetter('date'), reverse=True)
-            if self.settings.get('CATEGORY_FEED'):
+            if self.settings.get('CATEGORY_FEED_ATOM'):
                 writer.write_feed(arts, self.context,
-                                  self.settings['CATEGORY_FEED'] % cat)
+                                  self.settings['CATEGORY_FEED_ATOM'] % cat)
 
             if self.settings.get('CATEGORY_FEED_RSS'):
                 writer.write_feed(arts, self.context,
                                   self.settings['CATEGORY_FEED_RSS'] % cat,
                                   feed_type='rss')
 
-        if self.settings.get('TAG_FEED') or self.settings.get('TAG_FEED_RSS'):
+        if self.settings.get('TAG_FEED_ATOM') or self.settings.get('TAG_FEED_RSS'):
             for tag, arts in self.tags.items():
                 arts.sort(key=attrgetter('date'), reverse=True)
-                if self.settings.get('TAG_FEED'):
+                if self.settings.get('TAG_FEED_ATOM'):
                     writer.write_feed(arts, self.context,
-                                      self.settings['TAG_FEED'] % tag)
+                                      self.settings['TAG_FEED_ATOM'] % tag)
 
                 if self.settings.get('TAG_FEED_RSS'):
                     writer.write_feed(arts, self.context,
@@ -167,11 +174,9 @@ class ArticlesGenerator(Generator):
 
     def generate_articles(self, write):
         """Generate the articles."""
-        article_template = self.get_template('article')
         for article in chain(self.translations, self.articles):
-            write(article.save_as,
-                          article_template, self.context, article=article,
-                          category=article.category)
+            write(article.save_as, self.get_template(article.template),
+                self.context, article=article, category=article.category)
 
     def generate_direct_templates(self, write):
         """Generate direct templates pages"""
@@ -222,10 +227,10 @@ class ArticlesGenerator(Generator):
 
     def generate_drafts(self, write):
         """Generate drafts pages."""
-        article_template = self.get_template('article')
         for article in self.drafts:
-            write('drafts/%s.html' % article.slug, article_template,
-                  self.context, article=article, category=article.category)
+            write('drafts/%s.html' % article.slug,
+                self.get_template(article.template), self.context,
+                article=article, category=article.category)
 
     def generate_pages(self, writer):
         """Generate the pages on the disk"""
@@ -272,9 +277,13 @@ class ArticlesGenerator(Generator):
                 if category != '':
                     metadata['category'] = Category(category, self.settings)
 
-            if 'date' not in metadata and self.settings['FALLBACK_ON_FS_DATE']:
+            if 'date' not in metadata and self.settings['DEFAULT_DATE']:
+                if self.settings['DEFAULT_DATE'] == 'fs':
                     metadata['date'] = datetime.datetime.fromtimestamp(
-                                        os.stat(f).st_ctime)
+                            os.stat(f).st_ctime)
+                else:
+                    metadata['date'] = datetime.datetime(
+                            *self.settings['DEFAULT_DATE'])
 
             signals.article_generate_context.send(self, metadata=metadata)
             article = Article(content, metadata, settings=self.settings,
@@ -305,7 +314,7 @@ class ArticlesGenerator(Generator):
         self.articles.sort(key=attrgetter('date'), reverse=True)
         self.dates = list(self.articles)
         self.dates.sort(key=attrgetter('date'),
-                reverse=self.context['REVERSE_ARCHIVE_ORDER'])
+                reverse=self.context['NEWEST_FIRST_ARCHIVES'])
 
         # create tag cloud
         tag_cloud = defaultdict(int)
@@ -343,9 +352,9 @@ class ArticlesGenerator(Generator):
 
         self.authors = list(self.authors.items())
         self.authors.sort(key=lambda item: item[0].name)
-
+            
         self._update_context(('articles', 'dates', 'tags', 'categories',
-                              'tag_cloud', 'authors'))
+                              'tag_cloud', 'authors', 'related_posts'))
 
     def generate_output(self, writer):
         self.generate_feeds(writer)
@@ -360,7 +369,8 @@ class PagesGenerator(Generator):
         self.hidden_pages = []
         self.hidden_translations = []
         super(PagesGenerator, self).__init__(*args, **kwargs)
-
+        signals.pages_generator_init.send(self)
+ 
     def generate_context(self):
         all_pages = []
         hidden_pages = []
@@ -370,8 +380,9 @@ class PagesGenerator(Generator):
             try:
                 content, metadata = read_file(f)
             except Exception, e:
-                logger.error(u'Could not process %s\n%s' % (f, str(e)))
+                logger.warning(u'Could not process %s\n%s' % (f, str(e)))
                 continue
+            signals.pages_generate_context.send(self, metadata=metadata )
             page = Page(content, metadata, settings=self.settings,
                         filename=f)
             if not is_valid_content(page, f):
@@ -385,7 +396,6 @@ class PagesGenerator(Generator):
                                (repr(unicode.encode(page.status, 'utf-8')),
                                 repr(f)))
 
-
         self.pages, self.translations = process_translations(all_pages)
         self.hidden_pages, self.hidden_translations = process_translations(hidden_pages)
 
@@ -395,7 +405,7 @@ class PagesGenerator(Generator):
     def generate_output(self, writer):
         for page in chain(self.translations, self.pages,
                             self.hidden_translations, self.hidden_pages):
-            writer.write_file(page.save_as, self.get_template('page'),
+            writer.write_file(page.save_as, self.get_template(page.template),
                     self.context, page=page,
                     relative_urls=self.settings.get('RELATIVE_URLS'))
 

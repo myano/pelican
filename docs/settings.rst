@@ -8,10 +8,13 @@ the command line::
 
 Settings are configured in the form of a Python module (a file). You can see an
 example by looking at `/samples/pelican.conf.py
-<https://github.com/ametaireau/pelican/raw/master/samples/pelican.conf.py>`_
+<https://github.com/getpelican/pelican/raw/master/samples/pelican.conf.py>`_
 
 All the setting identifiers must be set in all-caps, otherwise they will not be
-processed.
+processed. Setting values that are numbers (5, 20, etc.), booleans (True,
+False, None, etc.), dictionaries, or tuples should *not* be enclosed in
+quotation marks. All other values (i.e., strings) *must* be enclosed in
+quotation marks.
 
 The settings you define in the configuration file will be passed to the
 templates, which allows you to use your settings to add site-wide content.
@@ -33,9 +36,13 @@ Setting name (default value)                                            What doe
 `DISPLAY_PAGES_ON_MENU` (``True``)                                      Whether to display pages on the menu of the
                                                                         template. Templates may or not honor this
                                                                         setting.
-`FALLBACK_ON_FS_DATE` (``True``)                                        If True, Pelican will use the file system
+`DEFAULT_DATE` (``fs``)                                                 The default date you want to use.
+                                                                        If 'fs', Pelican will use the file system
                                                                         timestamp information (mtime) if it can't get
                                                                         date information from the metadata.
+                                                                        If tuple object, it will instead generate the
+                                                                        default datetime object by passing the tuple to
+                                                                        the datetime.datetime constructor.
 `JINJA_EXTENSIONS` (``[]``)                                             A list of any Jinja2 extensions you want to use.
 `DELETE_OUTPUT_DIRECTORY` (``False``)                                   Delete the content of the output directory before
                                                                         generating new files.
@@ -66,7 +73,7 @@ Setting name (default value)                                            What doe
 `SITENAME` (``'A Pelican Blog'``)                                       Your site name
 `SITEURL`                                                               Base URL of your website. Not defined by default,
                                                                         so it is best to specify your SITEURL; if you do not, feeds
-                                                                        will not be generated with properly-formed URLs. You should 
+                                                                        will not be generated with properly-formed URLs. You should
                                                                         include ``http://`` and your domain, with no trailing
                                                                         slash at the end. Example: ``SITEURL = 'http://mydomain.com'``
 `STATIC_PATHS` (``['images']``)                                         The static paths you want to have accessible
@@ -76,11 +83,10 @@ Setting name (default value)                                            What doe
 `TIMEZONE`                                                              The timezone used in the date information, to
                                                                         generate Atom and RSS feeds. See the "timezone"
                                                                         section below for more info.
-`TYPOGRIFY` (``False``)                                                 If set to true, some
-                                                                        additional transformations will be done on the
-                                                                        generated HTML, using the `Typogrify
+`TYPOGRIFY` (``False``)                                                 If set to True, several typographical improvements will be
+                                                                        incorporated into the generated HTML via the `Typogrify
                                                                         <http://static.mintchaos.com/projects/typogrify/>`_
-                                                                        library
+                                                                        library, which can be installed via: ``pip install typogrify``
 `LESS_GENERATOR` (``FALSE``)                                            Set to True or complete path to `lessc` (if not
                                                                         found in system PATH) to enable compiling less
                                                                         css files. Requires installation of `less css`_.
@@ -89,12 +95,12 @@ Setting name (default value)                                            What doe
                                                                         index pages for collections of content e.g. tags and
                                                                         category index pages.
 `PAGINATED_DIRECT_TEMPLATES` (``('index',)``)                           Provides the direct templates that should be paginated.
-`SUMMARY_MAX_LENGTH` (``50``)                                           When creating a short summary of an article, this will 
+`SUMMARY_MAX_LENGTH` (``50``)                                           When creating a short summary of an article, this will
                                                                         be the default length in words of the text created.
-                                                                        This only applies if your content does not otherwise 
-                                                                        specify a summary. Setting to None will cause the summary 
+                                                                        This only applies if your content does not otherwise
+                                                                        specify a summary. Setting to None will cause the summary
                                                                         to be a copy of the original content.
-                                                                        
+
 =====================================================================   =====================================================================
 
 .. [#] Default is the system locale.
@@ -247,7 +253,7 @@ feeds if you prefer.
 
 Pelican generates category feeds as well as feeds for all your articles. It does
 not generate feeds for tags by default, but it is possible to do so using
-the ``TAG_FEED`` and ``TAG_FEED_RSS`` settings:
+the ``TAG_FEED_ATOM`` and ``TAG_FEED_RSS`` settings:
 
 ================================================    =====================================================
 Setting name (default value)                        What does it do?
@@ -258,11 +264,11 @@ Setting name (default value)                        What does it do?
                                                     you have already explicitly defined SITEURL (see
                                                     above) and want to use the same domain for your
                                                     feeds, you can just set:  `FEED_DOMAIN = SITEURL`
-`FEED` (``'feeds/all.atom.xml'``)                   Relative URL to output the Atom feed.
+`FEED_ATOM` (``'feeds/all.atom.xml'``)              Relative URL to output the Atom feed.
 `FEED_RSS` (``None``, i.e. no RSS)                  Relative URL to output the RSS feed.
-`CATEGORY_FEED` ('feeds/%s.atom.xml'[2]_)           Where to put the category Atom feeds.
+`CATEGORY_FEED_ATOM` ('feeds/%s.atom.xml'[2]_)      Where to put the category Atom feeds.
 `CATEGORY_FEED_RSS` (``None``, i.e. no RSS)         Where to put the category RSS feeds.
-`TAG_FEED` (``None``, i.e. no tag feed)             Relative URL to output the tag Atom feed. It should
+`TAG_FEED_ATOM` (``None``, i.e. no tag feed)        Relative URL to output the tag Atom feed. It should
                                                     be defined using a "%s" match in the tag name.
 `TAG_FEED_RSS` (``None``, ie no RSS tag feed)       Relative URL to output the tag RSS feed
 `FEED_MAX_ITEMS`                                    Maximum number of items allowed in a feed. Feed item
@@ -270,7 +276,8 @@ Setting name (default value)                        What does it do?
 ================================================    =====================================================
 
 If you don't want to generate some of these feeds, set ``None`` to the
-variables above.
+variables above. If you don't want to generate any feeds set both ``FEED_ATOM``
+and ``FEED_RSS`` to none.
 
 .. [2] %s is the name of the category.
 
@@ -281,7 +288,7 @@ If you want to use FeedBurner for your feed, you will likely need to decide
 upon a unique identifier. For example, if your site were called "Thyme" and
 hosted on the www.example.com domain, you might use "thymefeeds" as your
 unique identifier, which we'll use throughout this section for illustrative
-purposes. In your Pelican settings, set the `FEED` attribute to
+purposes. In your Pelican settings, set the `FEED_ATOM` attribute to
 "thymefeeds/main.xml" to create an Atom feed with an original address of
 `http://www.example.com/thymefeeds/main.xml`. Set the `FEED_DOMAIN` attribute
 to `http://feeds.feedburner.com`, or `http://feeds.example.com` if you are
@@ -360,8 +367,8 @@ Ordering content
 ================================================    =====================================================
 Setting name (default value)                        What does it do?
 ================================================    =====================================================
-`REVERSE_ARCHIVE_ORDER` (``False``)                 Reverse the archives list order. (True: orders by date
-                                                    in descending order, with newer articles first.)
+`NEWEST_FIRST_ARCHIVES` (``True``)                  Order archives by newest first by date. (False:
+                                                    orders by date with older articles first.)
 `REVERSE_CATEGORY_ORDER` (``False``)                Reverse the category order. (True: lists by reverse
                                                     alphabetical order; default lists alphabetically.)
 ================================================    =====================================================
@@ -396,7 +403,7 @@ manner. (Be sure to specify the full absolute path to it.)
 
 Here is :doc:`a guide on how to create your theme <themes>`
 
-You can find a list of themes at http://github.com/ametaireau/pelican-themes.
+You can find a list of themes at http://github.com/getpelican/pelican-themes.
 
 Pelican comes with :doc:`pelican-themes`, a small script for managing themes.
 
@@ -470,6 +477,15 @@ will produce a minified css file with the version identifier:
 
     <link href="http://{SITEURL}/theme/css/style.min.css?b3a7c807" rel="stylesheet">
 
+The filters can be combined, for example to use the `sass` compiler and minify
+the output::
+
+.. code-block:: jinja
+
+{% assets filters="sass,cssmin", output="css/style.min.css", "css/style.scss" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}">
+{% endassets %}
+
 Another example for javascript:
 
 .. code-block:: jinja
@@ -483,6 +499,12 @@ will produce a minified and gzipped js file:
 .. code-block:: html
 
     <script src="http://{SITEURL}/theme/js/packed.js?00703b9d"></script>
+
+Pelican's debug mode is propagated to webassets to disable asset packaging,
+and instead work with the uncompressed assets. However, this also means that
+the `less` and `sass` files are not compiled, this should be fixed in a future
+version of webassets (cf. the related `bug report
+<https://github.com/getpelican/pelican/issues/481>`_).
 
 .. _webassets: https://github.com/miracle2k/webassets
 .. _documentation: http://webassets.readthedocs.org/en/latest/builtin_filters.html
