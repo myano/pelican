@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals, print_function
+
 from docutils import nodes, utils
 from docutils.parsers.rst import directives, roles, Directive
 from pygments.formatters import HtmlFormatter
@@ -32,7 +34,7 @@ class Pygments(Directive):
         # take an arbitrary option if more than one is given
         formatter = self.options and VARIANTS[self.options.keys()[0]] \
                     or DEFAULT
-        parsed = highlight(u'\n'.join(self.content), lexer, formatter)
+        parsed = highlight('\n'.join(self.content), lexer, formatter)
         return [nodes.raw('', parsed, format='html')]
 
 directives.register_directive('code-block', Pygments)
@@ -98,15 +100,18 @@ directives.register_directive('youtube', YouTube)
 
 _abbr_re = re.compile('\((.*)\)$')
 
-class abbreviation(nodes.Inline, nodes.TextElement): pass
+
+class abbreviation(nodes.Inline, nodes.TextElement):
+    pass
+
 
 def abbr_role(typ, rawtext, text, lineno, inliner, options={}, content=[]):
-	text = utils.unescape(text)
-	m = _abbr_re.search(text)
-	if m is None:
-		return [abbreviation(text, text)], []
-	abbr = text[:m.start()].strip()
-	expl = m.group(1)
-	return [abbreviation(abbr, abbr, explanation=expl)], []
+    text = utils.unescape(text)
+    m = _abbr_re.search(text)
+    if m is None:
+        return [abbreviation(text, text)], []
+    abbr = text[:m.start()].strip()
+    expl = m.group(1)
+    return [abbreviation(abbr, abbr, explanation=expl)], []
 
 roles.register_local_role('abbr', abbr_role)

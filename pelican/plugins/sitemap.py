@@ -1,61 +1,37 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+import collections
 import os.path
 
 from datetime import datetime
-from logging import debug, warning, error, info
+from logging import warning, info
 from codecs import open
 
 from pelican import signals, contents
 
-TXT_HEADER = u"""{0}/index.html
+TXT_HEADER = """{0}/index.html
 {0}/archives.html
 {0}/tags.html
 {0}/categories.html
 """
 
-XML_HEADER = u"""<?xml version="1.0" encoding="utf-8"?>
+XML_HEADER = """<?xml version="1.0" encoding="utf-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
-         xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-  <url>
-    <loc>{0}/index.html</loc>
-    <lastmod>{1}</lastmod>
-    <changefreq>{2}</changefreq>
-    <priority>{3}</priority>
-  </url>
-
-  <url>
-    <loc>{0}/archives.html</loc>
-    <lastmod>{1}</lastmod>
-    <changefreq>{2}</changefreq>
-    <priority>{3}</priority>
-  </url>
-
-  <url>
-    <loc>{0}/tags.html</loc>
-    <lastmod>{1}</lastmod>
-    <changefreq>{2}</changefreq>
-    <priority>{3}</priority>
-  </url>
-
-  <url>
-    <loc>{0}/categories.html</loc>
-    <lastmod>{1}</lastmod>
-    <changefreq>{2}</changefreq>
-    <priority>{3}</priority>
-  </url>
+xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 """
 
-XML_URL = u"""
-  <url>
-    <loc>{0}/{1}</loc>
-    <lastmod>{2}</lastmod>
-    <changefreq>{3}</changefreq>
-    <priority>{4}</priority>
-  </url>
+XML_URL = """
+<url>
+<loc>{0}/{1}</loc>
+<lastmod>{2}</lastmod>
+<changefreq>{3}</changefreq>
+<priority>{4}</priority>
+</url>
 """
 
-XML_FOOTER = u"""
+XML_FOOTER = """
 </urlset>
 """
 
@@ -67,7 +43,6 @@ def format_date(date):
     else:
         tz = "-00:00"
     return date.strftime("%Y-%m-%dT%H:%M:%S") + tz
-
 
 
 class SitemapGenerator(object):
@@ -114,7 +89,8 @@ class SitemapGenerator(object):
                     'yearly', 'never')
 
             if isinstance(pris, dict):
-                for k, v in pris.iteritems():
+                # We use items for Py3k compat. .iteritems() otherwise
+                for k, v in pris.items():
                     if k in valid_keys and not isinstance(v, (int, float)):
                         default = self.priorities[k]
                         warning("sitemap plugin: priorities must be numbers")
@@ -127,7 +103,8 @@ class SitemapGenerator(object):
                 warning("sitemap plugin: using the default values")
 
             if isinstance(chfreqs, dict):
-                for k, v in chfreqs.iteritems():
+                # .items() for py3k compat.
+                for k, v in chfreqs.items():
                     if k in valid_keys and v not in valid_chfreqs:
                         default = self.changefreqs[k]
                         warning("sitemap plugin: invalid changefreq `{0}'".format(v))
@@ -144,6 +121,10 @@ class SitemapGenerator(object):
     def write_url(self, page, fd):
 
         if getattr(page, 'status', 'published') != 'published':
+            return
+
+        page_path = os.path.join(self.output_path, page.url)
+        if not os.path.exists(page_path):
             return
 
         lastmod = format_date(getattr(page, 'date', self.now))
@@ -176,28 +157,34 @@ class SitemapGenerator(object):
         for article in self.context['articles']:
             pages += article.translations
 
-
         info('writing {0}'.format(path))
 
         with open(path, 'w', encoding='utf-8') as fd:
 
             if self.format == 'xml':
-                fd.write(XML_HEADER.format(
-                        self.siteurl,
-                        format_date(self.now),
-                        self.changefreqs['indexes'],
-                        self.priorities['indexes']
-                    )
-                )
+                fd.write(XML_HEADER)
             else:
                 fd.write(TXT_HEADER.format(self.siteurl))
+
+            FakePage = collections.namedtuple('FakePage',
+                                              ['status',
+                                               'date',
+                                               'url'])
+
+            for standard_page_url in ['index.html',
+                                      'archives.html',
+                                      'tags.html',
+                                      'categories.html']:
+                fake = FakePage(status='published',
+                                date=self.now,
+                                url=standard_page_url)
+                self.write_url(fake, fd)
 
             for page in pages:
                 self.write_url(page, fd)
 
             if self.format == 'xml':
                 fd.write(XML_FOOTER)
-
 
 
 def get_generators(generators):

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals, print_function
 import copy
 from os.path import dirname, abspath, join
 
@@ -16,7 +18,7 @@ class TestSettingsConfiguration(unittest.TestCase):
         self.settings = read_settings(default_conf)
 
     def test_overwrite_existing_settings(self):
-        self.assertEqual(self.settings.get('SITENAME'), u"Alexis' log")
+        self.assertEqual(self.settings.get('SITENAME'), "Alexis' log")
         self.assertEqual(self.settings.get('SITEURL'),
                 'http://blog.notmyidea.org')
 
@@ -56,16 +58,19 @@ class TestSettingsConfiguration(unittest.TestCase):
     def test_configure_settings(self):
         """Manipulations to settings should be applied correctly."""
 
-        # SITEURL should not have a trailing slash
-        settings = {'SITEURL': 'http://blog.notmyidea.org/', 'LOCALE': ''}
+        settings = {
+                'SITEURL': 'http://blog.notmyidea.org/',
+                'LOCALE': '',
+                'PATH': '.',
+                'THEME': DEFAULT_THEME,
+                }
         configure_settings(settings)
+        # SITEURL should not have a trailing slash
         self.assertEqual(settings['SITEURL'], 'http://blog.notmyidea.org')
 
         # FEED_DOMAIN, if undefined, should default to SITEURL
-        settings = {'SITEURL': 'http://blog.notmyidea.org', 'LOCALE': ''}
-        configure_settings(settings)
         self.assertEqual(settings['FEED_DOMAIN'], 'http://blog.notmyidea.org')
 
-        settings = {'FEED_DOMAIN': 'http://feeds.example.com', 'LOCALE': ''}
+        settings['FEED_DOMAIN'] = 'http://feeds.example.com'
         configure_settings(settings)
         self.assertEqual(settings['FEED_DOMAIN'], 'http://feeds.example.com')
